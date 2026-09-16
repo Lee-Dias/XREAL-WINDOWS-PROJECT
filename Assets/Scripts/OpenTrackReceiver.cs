@@ -7,17 +7,21 @@ using UnityEngine;
 public class OpenTrackReceiver : MonoBehaviour
 {
     [Header("Configurações de Rede")]
-    public int port = 4242;
+    [SerializeField]
+    private int port = 4242;
 
     [Header("Objeto Alvo")]
-    public Transform targetTransform;
+    [SerializeField]
+    private Transform targetTransform;
 
     [Header("Tecla para Centrar")]
-    public KeyCode centerKey = KeyCode.C;
+    [SerializeField]
+    private KeyCode centerKey = KeyCode.C;
 
     [Header("Ajuste Manual de Inclinação (Pitch Offset)")]
     [Tooltip("Soma graus à vista vertical (ex: 0, 15, 30) para ajustar a altura do olhar padrão.")]
-    public float manualPitchOffset = 0f;
+    [SerializeField]
+    private float manualPitchOffset = 0f;
 
     private UdpClient udpClient;
     private Thread receiveThread;
@@ -26,7 +30,6 @@ public class OpenTrackReceiver : MonoBehaviour
     private Vector3 rawRotation;
     private readonly object lockObject = new object();
 
-    // Guardar os valores brutos capturados no momento do 'C'
     private float pitchCenter = 0f;
     private float yawCenter = 0f;
     private bool isCalibrated = false;
@@ -54,7 +57,6 @@ public class OpenTrackReceiver : MonoBehaviour
 
                 if (data.Length >= 48)
                 {
-                    // ADICIONA ESTA LINHA PARA TESTAR NA CONSOLA DO UNITY
                     Debug.Log($"[REDE OK] Pacote recebido de: {remoteEndPoint.Address}");
 
                     double yaw = BitConverter.ToDouble(data, 24);
@@ -84,7 +86,6 @@ public class OpenTrackReceiver : MonoBehaviour
         float currentPitch = -rot.x;
         float currentYaw = rot.y;
 
-        // Se for a primeira vez ou se carregares no 'C', guarda o centro exato
         if (!isCalibrated || Input.GetKeyDown(centerKey))
         {
             pitchCenter = currentPitch;
@@ -93,13 +94,9 @@ public class OpenTrackReceiver : MonoBehaviour
             Debug.Log("Centro calibrado!");
         }
 
-        // Calcula os ângulos relativos ao ponto em que carregaste no 'C'
         float finalPitch = (currentPitch - pitchCenter) + manualPitchOffset;
         float finalYaw = currentYaw - yawCenter;
 
-        // --- GARANTIA CONTRA DIAGONAL ---
-        // 1. O Yaw roda SEMPRE em torno do vetor global do mundo (Vector3.up).
-        // Isso impede fisicamente a câmara de inclinar de lado ao virar a cabeça.
         Quaternion yawRotation = Quaternion.AngleAxis(finalYaw, Vector3.up);
 
         Quaternion pitchRotation = Quaternion.AngleAxis(finalPitch, Vector3.right);
